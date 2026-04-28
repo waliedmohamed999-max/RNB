@@ -46,6 +46,7 @@ async function logout(request: NextRequest, redirectToLogin: boolean) {
     "XSRF-TOKEN",
     "laravel_session",
     "labayh_session",
+    "labayh_vercel_admin",
     "cartalyst_sentinel",
   ]);
   request.cookies.getAll().forEach((cookie) => {

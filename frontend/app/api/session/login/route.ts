@@ -20,6 +20,8 @@ type LoginRequestBody = {
   return_url?: unknown;
 };
 
+const VERCEL_ADMIN_COOKIE = "labayh_vercel_admin";
+
 export async function POST(request: NextRequest) {
   const rateLimit = checkRateLimit(request, "session-login", 10);
   if (rateLimit) return rateLimit;
@@ -43,6 +45,11 @@ export async function POST(request: NextRequest) {
 
   if (!isEmailLogin && (!mobile || code.some((digit) => digit.length !== 1))) {
     return jsonError("Invalid login request.", 422);
+  }
+
+  const localAdminResponse = createLocalAdminSession(email, password, payload.return_url);
+  if (localAdminResponse) {
+    return localAdminResponse;
   }
 
   const controller = new AbortController();
@@ -110,10 +117,47 @@ export async function POST(request: NextRequest) {
     appendHardenedSetCookies(response, upstream);
     return response;
   } catch {
-    return jsonError("Unable to reach the login service right now.", 503);
+    return jsonError(
+      "تعذر الاتصال بخدمة تسجيل الدخول. اضبط NEXT_PUBLIC_LEGACY_BASE_URL على رابط Laravel، أو أضف ADMIN_EMAIL و ADMIN_PASSWORD في Vercel.",
+      503,
+    );
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function createLocalAdminSession(email: string, password: string, returnUrl: unknown) {
+  const adminEmail = process.env.ADMIN_EMAIL?.trim();
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "";
+
+  if (!adminEmail || !adminPassword || email.toLowerCase() !== adminEmail.toLowerCase() || password !== adminPassword) {
+    return null;
+  }
+
+  const user = {
+    id: 1,
+    email: adminEmail,
+    mobile: "",
+    first_name: "Admin",
+    last_name: "",
+    display_name: "Admin",
+    avatar: "",
+    roles: ["admin", "administrator"],
+    dashboard_url: "/dashboard",
+  };
+  const redirect =
+    typeof returnUrl === "string" && returnUrl.startsWith("/") ? returnUrl.slice(0, 200) : "/dashboard";
+  const response = NextResponse.json({ status: 1, data: user, redirect });
+
+  response.cookies.set(VERCEL_ADMIN_COOKIE, encodeURIComponent(JSON.stringify(user)), {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+
+  return response;
 }
 
 function normalizeDashboardRedirect(value: string, fallback: string) {
