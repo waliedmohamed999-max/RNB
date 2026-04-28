@@ -93,7 +93,7 @@ export function Navbar({ currentUser, settings, menuItems = [] }: NavbarProps) {
           )}
         </div>
 
-        <nav className="order-2 flex min-w-0 flex-1 items-center gap-5 overflow-x-auto px-1 py-2 scrollbar-hide lg:flex-none lg:gap-6 lg:overflow-visible">
+        <nav className="order-2 hidden min-w-0 flex-1 items-center gap-5 overflow-x-auto px-1 py-2 scrollbar-hide lg:flex lg:flex-none lg:gap-6 lg:overflow-visible">
           {navigationItems.map((item) => (
             <Link key={`${item.title}-${item.href}`} href={item.href} target={item.target} className="shrink-0 text-sm font-semibold text-slate-800 transition hover:text-rose-600">
               {item.title}

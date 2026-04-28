@@ -137,24 +137,24 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div dir="rtl" className="space-y-6 font-[Cairo]">
+    <div dir="rtl" className="max-w-full space-y-6 overflow-hidden font-[Cairo]">
       <section className="overflow-hidden rounded-3xl border border-slate-100 bg-[#1a1f36] text-white shadow-[0_28px_90px_-48px_rgba(15,23,42,0.8)]">
-        <div className="relative p-6 lg:p-8">
+        <div className="relative p-5 sm:p-6 lg:p-8">
           <div className="absolute left-8 top-8 hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-white/70 lg:block">
             لوحة {siteBrand.nameAr}
           </div>
-          <div className="max-w-3xl">
+          <div className="max-w-3xl overflow-hidden">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold">
               <Gauge className="size-4" />
               مركز تشغيل موحد
             </span>
-            <h1 className="mt-5 text-3xl font-bold sm:text-4xl">أهلًا {currentUser.display_name}</h1>
-            <p className="mt-4 max-w-2xl text-sm leading-8 text-white/72">
+            <h1 className="mt-5 break-words text-2xl font-bold leading-tight sm:text-4xl">أهلًا {currentUser.display_name}</h1>
+            <p className="mt-4 max-w-2xl break-words text-sm leading-7 text-white/72 sm:leading-8">
               لوحة عمل حديثة تجمع الحجوزات، المدفوعات، المحتوى، التنبيهات، والإعدادات المهمة في مكان واحد لاتخاذ قرارات أسرع.
             </p>
           </div>
 
-          <div className="mt-8 grid gap-3 md:grid-cols-3">
+          <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:mt-8">
             <HeroSignal icon={ShieldCheck} label="حالة النظام" value="مستقر" />
             <HeroSignal icon={TrendingUp} label="اكتمال الحجوزات" value={`${completedRate}%`} />
             <HeroSignal icon={Bell} label="التنبيهات الحرجة" value={summary.pending_count ? `${numberValue(summary.pending_count)}` : "0"} />
@@ -266,13 +266,13 @@ export default async function DashboardPage() {
 
 function HeroSignal({ icon: Icon, label, value }: { icon: IconType; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur">
+    <div className="min-w-0 rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs text-white/55">{label}</p>
-          <p className="mt-2 text-lg font-bold text-white">{value}</p>
+        <div className="min-w-0">
+          <p className="break-words text-xs text-white/55">{label}</p>
+          <p className="mt-2 break-words text-lg font-bold text-white">{value}</p>
         </div>
-        <Icon className="size-5 text-[#FF385C]" />
+        <Icon className="size-5 shrink-0 text-[#FF385C]" />
       </div>
     </div>
   );
