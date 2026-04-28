@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Viewport } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -27,6 +28,11 @@ import { Navbar } from "@/components/sections/navbar";
 import { type BridgeSessionUser, getSessionUser } from "@/lib/api";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { DASHBOARD_SESSION_HEADER, decodeSessionHeader } from "@/lib/session-header";
+
+export const viewport: Viewport = {
+  width: 1440,
+  initialScale: 1,
+};
 
 type NavLinkProps = {
   href: string;
