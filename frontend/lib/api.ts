@@ -862,6 +862,22 @@ const FALLBACK_DASHBOARD_SUMMARY: BridgeDashboardSummary = {
   quick_links: [],
 };
 
+const FALLBACK_PROFILE: BridgeProfile = {
+  id: LOGIN_DISABLED_USER.id,
+  email: LOGIN_DISABLED_USER.email,
+  mobile: LOGIN_DISABLED_USER.mobile,
+  first_name: LOGIN_DISABLED_USER.first_name,
+  last_name: LOGIN_DISABLED_USER.last_name,
+  display_name: LOGIN_DISABLED_USER.display_name,
+  location: "",
+  address: "",
+  description: "Preview admin profile until the Laravel API is connected.",
+  trade_name: "Labayh",
+  avatar: LOGIN_DISABLED_USER.avatar,
+  roles: LOGIN_DISABLED_USER.roles,
+  dashboard_url: LOGIN_DISABLED_USER.dashboard_url,
+};
+
 const FALLBACK_NOTIFICATIONS: BridgeNotificationsResponse = {
   total: 3,
   page: 1,
@@ -924,6 +940,100 @@ const FALLBACK_MESSAGES_META: BridgeMessagesMeta = {
   users: [
     { id: 1, name: "Admin", mobile: "+966500000000", email: "admin@labayh.local" },
     { id: 2, name: "Preview User", mobile: "+966511111111", email: "preview@labayh.local" },
+  ],
+};
+
+const FALLBACK_LANGUAGES: BridgeLanguagesResponse = {
+  total: 2,
+  page: 1,
+  per_page: 20,
+  catalog: {
+    ar: { name: "Arabic" },
+    en: { name: "English" },
+  },
+  results: [
+    {
+      id: 1,
+      code: "ar",
+      name: "Arabic",
+      flag_name: "Saudi Arabia",
+      flag_code: "sa",
+      status: "publish",
+      rtl: "on",
+      priority: 1,
+    },
+    {
+      id: 2,
+      code: "en",
+      name: "English",
+      flag_name: "United States",
+      flag_code: "us",
+      status: "publish",
+      rtl: "off",
+      priority: 2,
+    },
+  ],
+};
+
+const FALLBACK_TRANSLATION: BridgeTranslationResponse = {
+  langs: {
+    ar: { name: "Arabic" },
+    en: { name: "English" },
+  },
+  lang: "ar",
+  strings: ["dashboard.title", "dashboard.preview", "common.save", "common.cancel"],
+  translation: {
+    "dashboard.title": "Dashboard",
+    "dashboard.preview": "Preview mode",
+    "common.save": "Save",
+    "common.cancel": "Cancel",
+  },
+};
+
+const FALLBACK_SEO: BridgeSeoResponse = {
+  enabled: true,
+  pages: [
+    {
+      key: "home",
+      screen: "home",
+      name: "Home",
+      seo_title: JSON.stringify({ ar: "Labayh", en: "Labayh" }),
+      seo_description: JSON.stringify({ ar: "Booking platform", en: "Booking platform" }),
+      facebook_title: JSON.stringify({ ar: "Labayh", en: "Labayh" }),
+      facebook_description: JSON.stringify({ ar: "Booking platform", en: "Booking platform" }),
+      facebook_image: 0,
+      twitter_title: JSON.stringify({ ar: "Labayh", en: "Labayh" }),
+      twitter_description: JSON.stringify({ ar: "Booking platform", en: "Booking platform" }),
+      twitter_image: 0,
+    },
+    {
+      key: "dashboard",
+      screen: "dashboard",
+      name: "Dashboard",
+      seo_title: JSON.stringify({ ar: "Dashboard", en: "Dashboard" }),
+      seo_description: JSON.stringify({ ar: "Administration dashboard", en: "Administration dashboard" }),
+      facebook_title: JSON.stringify({ ar: "Dashboard", en: "Dashboard" }),
+      facebook_description: JSON.stringify({ ar: "Administration dashboard", en: "Administration dashboard" }),
+      facebook_image: 0,
+      twitter_title: JSON.stringify({ ar: "Dashboard", en: "Dashboard" }),
+      twitter_description: JSON.stringify({ ar: "Administration dashboard", en: "Administration dashboard" }),
+      twitter_image: 0,
+    },
+  ],
+};
+
+const FALLBACK_API_SETTINGS: BridgeApiSettings = {
+  access_token: "preview-token",
+  api_lifetime: "30",
+  api_lifetime_type: "day",
+};
+
+const FALLBACK_SYSTEM_TOOLS: BridgeSystemTools = {
+  password_required: false,
+  tools: [
+    { value: "clear_cache", label: "Clear cache" },
+    { value: "database_backup", label: "Database backup" },
+    { value: "test_email", label: "Test email" },
   ],
 };
 
@@ -1154,10 +1264,10 @@ export async function getWishlist(cookieHeader?: string, type?: string) {
 }
 
 export async function getProfile(cookieHeader?: string) {
-  return fetchBridge<BridgeProfile>("profile", {
+  return (await fetchBridge<BridgeProfile>("profile", {
     cookieHeader,
     revalidate: false,
-  });
+  })) ?? FALLBACK_PROFILE;
 }
 
 export async function getDashboardSummary(cookieHeader?: string) {
@@ -1880,39 +1990,41 @@ export async function getLanguages(
   if (search) params.set("_s", search);
   if (status) params.set("status", status);
 
-  return fetchBridge<BridgeLanguagesResponse>(
+  return (await fetchBridge<BridgeLanguagesResponse>(
     `dashboard/system-native/languages${params.toString() ? `?${params.toString()}` : ""}`,
     { cookieHeader, revalidate: false },
-  );
+  )) ?? FALLBACK_LANGUAGES;
 }
 
 export async function getTranslationData(lang: string, cookieHeader?: string) {
   const suffix = lang ? `?lang=${encodeURIComponent(lang)}` : "";
-  return fetchBridge<BridgeTranslationResponse>(`dashboard/system-native/translation${suffix}`, {
+  const payload = await fetchBridge<BridgeTranslationResponse>(`dashboard/system-native/translation${suffix}`, {
     cookieHeader,
     revalidate: false,
   });
+
+  return payload ?? { ...FALLBACK_TRANSLATION, lang: lang && lang !== "none" ? lang : FALLBACK_TRANSLATION.lang };
 }
 
 export async function getSeoData(cookieHeader?: string) {
-  return fetchBridge<BridgeSeoResponse>("dashboard/system-native/seo", {
+  return (await fetchBridge<BridgeSeoResponse>("dashboard/system-native/seo", {
     cookieHeader,
     revalidate: false,
-  });
+  })) ?? FALLBACK_SEO;
 }
 
 export async function getApiSettings(cookieHeader?: string) {
-  return fetchBridge<BridgeApiSettings>("dashboard/system-native/api", {
+  return (await fetchBridge<BridgeApiSettings>("dashboard/system-native/api", {
     cookieHeader,
     revalidate: false,
-  });
+  })) ?? FALLBACK_API_SETTINGS;
 }
 
 export async function getSystemTools(cookieHeader?: string) {
-  return fetchBridge<BridgeSystemTools>("dashboard/system-native/tools", {
+  return (await fetchBridge<BridgeSystemTools>("dashboard/system-native/tools", {
     cookieHeader,
     revalidate: false,
-  });
+  })) ?? FALLBACK_SYSTEM_TOOLS;
 }
 
 export async function getPostComments(
