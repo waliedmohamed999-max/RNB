@@ -58,9 +58,9 @@ export function Navbar({ currentUser, settings, menuItems = [] }: NavbarProps) {
           : "0 0 0 rgba(15,23,42,0)",
         borderColor: scrolled ? "rgba(226,232,240,0.9)" : "rgba(255,255,255,0.24)",
       }}
-      className="fixed inset-x-0 top-0 z-50 border-b backdrop-blur-xl"
+      className="fixed inset-x-0 top-0 z-50 overflow-x-auto border-b backdrop-blur-xl"
     >
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-10">
+      <div className="mx-auto flex min-w-[1180px] max-w-[1440px] items-center justify-between gap-3 px-6 py-4 lg:px-10">
         <div className="order-3 flex items-center gap-2">
           <Link href="/dashboard/notifications" className={actionClass} aria-label="الإشعارات">
             <Bell className="size-4" />
@@ -73,7 +73,7 @@ export function Navbar({ currentUser, settings, menuItems = [] }: NavbarProps) {
             <>
               <Link
                 href="/dashboard"
-                className="hidden rounded-lg border border-white/50 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-white xl:inline-flex"
+                className="inline-flex rounded-lg border border-white/50 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-white"
               >
                 {currentUser.display_name}
               </Link>
@@ -93,7 +93,7 @@ export function Navbar({ currentUser, settings, menuItems = [] }: NavbarProps) {
           )}
         </div>
 
-        <nav className="order-2 hidden items-center gap-6 xl:flex">
+        <nav className="order-2 flex items-center gap-6">
           {navigationItems.map((item) => (
             <Link key={`${item.title}-${item.href}`} href={item.href} target={item.target} className="text-sm font-semibold text-slate-800 transition hover:text-rose-600">
               {item.title}
@@ -125,7 +125,7 @@ export function Navbar({ currentUser, settings, menuItems = [] }: NavbarProps) {
             <div className="text-xl font-semibold tracking-tight text-slate-950">{siteBrand.nameAr}</div>
           </div>
           <button
-            className={actionClass + " xl:hidden"}
+            className={actionClass + " hidden"}
             aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
             type="button"
             onClick={() => setMenuOpen((value) => !value)}
@@ -136,7 +136,7 @@ export function Navbar({ currentUser, settings, menuItems = [] }: NavbarProps) {
       </div>
 
       {menuOpen ? (
-        <div className="border-t border-slate-200 bg-white px-4 py-4 shadow-lg xl:hidden">
+        <div className="border-t border-slate-200 bg-white px-4 py-4 shadow-lg">
           <nav className="mx-auto grid max-w-[1440px] gap-2">
             {navigationItems.map((item) => (
               <Link

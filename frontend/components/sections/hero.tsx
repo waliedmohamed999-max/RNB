@@ -94,7 +94,7 @@ export function Hero({ settings, quickLinks = [] }: { settings?: BridgeSystemSet
   }, [activeSlide, settings, siteBrand.nameAr]);
 
   return (
-    <section className="relative overflow-hidden bg-white">
+    <section className="relative overflow-x-auto overflow-y-hidden bg-white">
       <div className="relative min-h-[720px]">
         <AnimatePresence mode="wait">
           <motion.div
@@ -114,7 +114,7 @@ export function Hero({ settings, quickLinks = [] }: { settings?: BridgeSystemSet
           </motion.div>
         </AnimatePresence>
 
-        <div className="relative mx-auto flex min-h-[720px] max-w-[1440px] flex-col justify-end px-4 pb-10 pt-32 sm:px-6 lg:px-10">
+        <div className="relative mx-auto flex min-h-[720px] min-w-[1180px] max-w-[1440px] flex-col justify-end px-6 pb-10 pt-32 lg:px-10">
           <div className="max-w-4xl pb-8 text-white">
             <span className="inline-flex rounded-md border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur">
               {currentSlide.eyebrow}
@@ -156,7 +156,7 @@ export function Hero({ settings, quickLinks = [] }: { settings?: BridgeSystemSet
           <div className="rounded-lg border border-white/40 bg-white p-3 shadow-[0_26px_80px_-38px_rgba(15,23,42,0.75)]">
             <form
               action="/home-search-result"
-              className="grid gap-3 lg:grid-cols-[1.25fr_1fr_1fr_.75fr_.75fr_auto]"
+              className="grid grid-cols-[1.25fr_1fr_1fr_.75fr_.75fr_auto] gap-3"
             >
               <Field label="المدينة" icon={<MapPin className="size-4" />}>
                 <input
