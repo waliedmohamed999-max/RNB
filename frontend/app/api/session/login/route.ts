@@ -44,6 +44,9 @@ function safeReturnUrl(value: unknown, fallback = "/dashboard") {
     : fallback;
 }
 
+function encodeLocalAdminSession(session: unknown) {
+  return Buffer.from(JSON.stringify(session), "utf8").toString("base64url");
+}
 function createLocalAdminSession() {
   return {
     id: 1,
@@ -73,7 +76,7 @@ function localAdminLoginResponse(payload: LoginRequestBody, password: string) {
     data: session,
   });
 
-  response.cookies.set(LOCAL_ADMIN_COOKIE, encodeURIComponent(JSON.stringify(session)), {
+  response.cookies.set(LOCAL_ADMIN_COOKIE, encodeLocalAdminSession(session), {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",

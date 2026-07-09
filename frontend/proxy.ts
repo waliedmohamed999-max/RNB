@@ -83,13 +83,16 @@ async function getSession(request: NextRequest) {
   }
 }
 
-function readLocalAdminSession(value?: string) {
-  if (!value) {
-    return null;
-  }
-
+function decodeBase64Url(value: string) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+function parseSessionCandidate(value: string) {
   try {
-    const session = JSON.parse(decodeURIComponent(value)) as { roles?: unknown };
+    const session = JSON.parse(value) as { roles?: unknown };
     const roles = Array.isArray(session.roles) ? session.roles : [];
     return roles.length > 0 ? session : null;
   } catch {
@@ -97,6 +100,44 @@ function readLocalAdminSession(value?: string) {
   }
 }
 
+function decodeSessionCookieValue(raw: string) {
+  const candidates = new Set<string>([raw]);
+  let decoded = raw;
+
+  for (let index = 0; index < 3; index += 1) {
+    try {
+      decoded = decodeURIComponent(decoded);
+      candidates.add(decoded);
+    } catch {
+      break;
+    }
+  }
+
+  for (const candidate of Array.from(candidates)) {
+    try {
+      candidates.add(decodeBase64Url(candidate));
+    } catch {
+      // Keep trying the remaining formats.
+    }
+  }
+
+  return candidates;
+}
+
+function readLocalAdminSession(value?: string) {
+  if (!value) {
+    return null;
+  }
+
+  for (const candidate of decodeSessionCookieValue(value)) {
+    const session = parseSessionCandidate(candidate);
+    if (session) {
+      return session;
+    }
+  }
+
+  return null;
+}
 function isAdminSession(session: { roles?: unknown } | null) {
   const roles = Array.isArray(session?.roles) ? session.roles.map((role) => String(role).toLowerCase()) : [];
   return roles.some((role) => ["administrator", "admin", "superadmin"].includes(role));

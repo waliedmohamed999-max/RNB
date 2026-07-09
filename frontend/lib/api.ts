@@ -1010,6 +1010,40 @@ function getCookieValue(cookieHeader: string, name: string) {
     ?.slice(name.length + 1);
 }
 
+function parseSessionCandidate(value: string): BridgeSessionUser | null {
+  try {
+    const session = JSON.parse(value) as BridgeSessionUser;
+    const roles = Array.isArray(session.roles) ? session.roles : [];
+    return roles.length > 0 ? session : null;
+  } catch {
+    return null;
+  }
+}
+
+function decodeLocalAdminSessionValue(raw: string) {
+  const candidates = new Set<string>([raw]);
+  let decoded = raw;
+
+  for (let index = 0; index < 3; index += 1) {
+    try {
+      decoded = decodeURIComponent(decoded);
+      candidates.add(decoded);
+    } catch {
+      break;
+    }
+  }
+
+  for (const candidate of Array.from(candidates)) {
+    try {
+      candidates.add(Buffer.from(candidate, "base64url").toString("utf8"));
+    } catch {
+      // Keep trying the remaining formats.
+    }
+  }
+
+  return candidates;
+}
+
 function readLocalAdminSession(cookieHeader?: string): BridgeSessionUser | null {
   if (!cookieHeader) {
     return null;
@@ -1020,13 +1054,14 @@ function readLocalAdminSession(cookieHeader?: string): BridgeSessionUser | null 
     return null;
   }
 
-  try {
-    const session = JSON.parse(decodeURIComponent(raw)) as BridgeSessionUser;
-    const roles = Array.isArray(session.roles) ? session.roles : [];
-    return roles.length > 0 ? session : null;
-  } catch {
-    return null;
+  for (const candidate of decodeLocalAdminSessionValue(raw)) {
+    const session = parseSessionCandidate(candidate);
+    if (session) {
+      return session;
+    }
   }
+
+  return null;
 }
 
 export async function getSessionUser(cookieHeader?: string) {
@@ -1794,10 +1829,32 @@ export async function getLanguages(
   if (search) params.set("_s", search);
   if (status) params.set("status", status);
 
-  return fetchBridge<BridgeLanguagesResponse>(
+  const payload = await fetchBridge<BridgeLanguagesResponse>(
     `dashboard/system-native/languages${params.toString() ? `?${params.toString()}` : ""}`,
     { cookieHeader, revalidate: false },
   );
+
+  if (payload) {
+    return payload;
+  }
+
+  if (readLocalAdminSession(cookieHeader)) {
+    return {
+      total: 2,
+      page: 1,
+      per_page: 20,
+      catalog: {
+        ar: { name: "Arabic" },
+        en: { name: "English" },
+      },
+      results: [
+        { id: 1, code: "ar", name: "العربية", flag_name: "Saudi Arabia", flag_code: "sa", status: "on", rtl: "yes", priority: 1 },
+        { id: 2, code: "en", name: "English", flag_name: "United States", flag_code: "us", status: "on", rtl: "no", priority: 2 },
+      ],
+    } satisfies BridgeLanguagesResponse;
+  }
+
+  return null;
 }
 
 export async function getTranslationData(lang: string, cookieHeader?: string) {
