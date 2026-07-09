@@ -6,6 +6,9 @@
 *.rar
 *.7z
 
+# Database dumps (must never be committed - can contain real customer data)
+*.sql
+
 # OS/editor noise
 .DS_Store
 Thumbs.db
