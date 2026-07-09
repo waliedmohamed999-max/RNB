@@ -11,7 +11,7 @@ import {
 } from "../auth.js";
 import { pool, query } from "../db.js";
 import { HttpError, validate } from "../http.js";
-import { partnerDocumentUpload } from "../uploads.js";
+import { partnerDocumentUpload, verifyAndPersistUpload } from "../uploads.js";
 
 export const authRouter = Router();
 
@@ -67,8 +67,10 @@ authRouter.post("/register-partner", registrationUpload, validate(registerSchema
     const body = (request.validated as z.infer<typeof registerSchema>).body;
     const passwordHash = await hashPassword(body.password);
     const files = request.files as Record<string, Express.Multer.File[]> | undefined;
-    const commercialRecordUrl = files?.commercialRecord?.[0]?.path ?? null;
-    const identityUrl = files?.identityDocument?.[0]?.path ?? null;
+    const commercialRecordFile = files?.commercialRecord?.[0];
+    const identityFile = files?.identityDocument?.[0];
+    const commercialRecordUrl = commercialRecordFile ? await verifyAndPersistUpload(commercialRecordFile) : null;
+    const identityUrl = identityFile ? await verifyAndPersistUpload(identityFile) : null;
 
     await client.query("BEGIN");
 

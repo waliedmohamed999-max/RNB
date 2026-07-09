@@ -1,7 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdminSession } from "@/lib/api-security";
 import { readPaymentsStore } from "../../_store";
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const { id } = await context.params;
   const store = await readPaymentsStore();
   const transaction = store.transactions.find((item) => item.id === id);

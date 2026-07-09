@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertCsrf, jsonError } from "@/lib/api-security";
+import { assertCsrf, jsonError, requireAdminSession } from "@/lib/api-security";
 import { readToolsStore, writeToolsStore, type Job } from "../_store";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const store = await readToolsStore();
   return NextResponse.json({ status: 1, data: store.jobs });
 }
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const csrfError = assertCsrf(request);
   if (csrfError) return csrfError;
   const body = (await request.json().catch(() => null)) as Partial<Job> | null;

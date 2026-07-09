@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminSession } from "@/lib/api-security";
 import type { PaymentMethod } from "@/lib/payment-methods";
 import { defaultPaymentMethods, getPaymentMethods, savePaymentMethods } from "@/lib/payment-methods";
 
 const validKeys = new Set(defaultPaymentMethods.map((method) => method.key));
 const validSettlements = new Set(["online", "manual", "offline", "installment"]);
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const methods = await getPaymentMethods();
   return NextResponse.json({ status: 1, data: methods });
 }
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const payload = (await request.json().catch(() => null)) as { methods?: unknown } | null;
 
   if (!payload || !Array.isArray(payload.methods)) {

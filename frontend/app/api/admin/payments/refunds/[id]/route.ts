@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertCsrf } from "@/lib/api-security";
+import { assertCsrf, requireAdminSession } from "@/lib/api-security";
 import { readPaymentsStore, writePaymentsStore } from "../../_store";
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const csrfError = assertCsrf(request);
   if (csrfError) return csrfError;
   const { id } = await context.params;

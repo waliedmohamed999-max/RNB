@@ -46,7 +46,7 @@ $fields = <<<EOT
     "userName": "dosare1981",
     "numbers": "$phone",
     "userSender": "TADAWL.SA",
-    "apiKey": "afa526ac1011899e6259b7a2bc48062c",
+    "apiKey": "$tadawl_sms_api_key",
     "msg": "$msg"
 }
 EOT;

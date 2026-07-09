@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth/auth_controller.dart';
 import '../auth/session_store.dart';
 import '../config/app_config.dart';
 
@@ -26,8 +27,15 @@ final dioProvider = Provider<Dio>((ref) {
       },
       onError: (error, handler) async {
         final refreshToken = await store.readRefreshToken();
+        // Guard against retrying the same request more than once: if the retried
+        // request still comes back 401 (e.g. the resource itself requires
+        // different auth, not just an expired token), fall through instead of
+        // refreshing again in an unbounded loop.
+        final alreadyRetriedAfterRefresh =
+            error.requestOptions.extra['retriedAfterRefresh'] == true;
         final canRefresh =
             error.response?.statusCode == 401 &&
+            !alreadyRetriedAfterRefresh &&
             refreshToken != null &&
             refreshToken.isNotEmpty &&
             error.requestOptions.path != '/auth/refresh';
@@ -49,11 +57,16 @@ final dioProvider = Provider<Dio>((ref) {
           );
           final retry = await dio.fetch(
             error.requestOptions
+              ..extra['retriedAfterRefresh'] = true
               ..headers['Authorization'] = 'Bearer ${data['token']}',
           );
           return handler.resolve(retry);
         } catch (_) {
-          await store.clear();
+          // Refresh failed (expired/invalid refresh token, or the backend is
+          // unreachable) - log the user out so the router redirects to /login
+          // immediately, instead of leaving them on a protected screen with no
+          // valid token.
+          await ref.read(authControllerProvider.notifier).logout();
           return handler.next(error);
         }
       },

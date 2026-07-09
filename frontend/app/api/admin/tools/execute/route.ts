@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertCsrf } from "@/lib/api-security";
+import { assertCsrf, requireAdminSession } from "@/lib/api-security";
 import { legacyUrl } from "@/lib/platform";
 import { readToolsStore, writeToolsStore, type ToolRun } from "../_store";
 
 const bridgeActions = new Set(["clear_cache", "clear_view", "update_version", "symlink", "maintenance_on", "maintenance_off"]);
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const csrfError = assertCsrf(request);
   if (csrfError) return csrfError;
 

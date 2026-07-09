@@ -12,6 +12,19 @@ $cookie_name_password = "password";
 $url_hraj = "https://blagat.sa/";
 $number_tags_update = 1;
 
+# Load secrets (e.g. TADAWL_SMS_API_KEY) from the .env file outside this web-servable directory.
+require_once __DIR__ . '/../../../vendor/autoload.php';
+try {
+    if (file_exists(__DIR__ . '/../../../.env')) {
+        $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../../');
+        $dotenv->safeLoad();
+    }
+} catch (Throwable $e) {
+    // Ignore malformed .env parsing errors here; fall back to an empty key below
+    // rather than taking down this legacy endpoint.
+}
+$tadawl_sms_api_key = $_ENV['TADAWL_SMS_API_KEY'] ?? (getenv('TADAWL_SMS_API_KEY') ?: '');
+
 ############## لا تقم بتعديل شئ هنا ##########################
 $mysqli = new mysqli("$db_server","$db_username","$db_password","$db_name");
 ############## لا تقم بتعديل شئ هنا ##########################

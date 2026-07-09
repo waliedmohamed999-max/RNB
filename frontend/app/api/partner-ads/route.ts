@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertCsrf, checkRateLimit, jsonError, readJsonBody } from "@/lib/api-security";
+import { assertCsrf, checkRateLimit, jsonError, readJsonBody, requireAdminSession } from "@/lib/api-security";
 import { createPartnerAd, listPartnerAds, listPublicAds } from "@/lib/partner-ads-store";
+import { resolveAuthenticatedPartnerId } from "@/lib/partner-session";
 
 function cleanText(value: unknown, fallback = "") {
   return typeof value === "string" ? value.trim().slice(0, 220) : fallback;
@@ -9,14 +10,19 @@ function cleanText(value: unknown, fallback = "") {
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const scope = searchParams.get("scope") ?? "public";
-  const partnerId = searchParams.get("partnerId") ?? undefined;
   const partnerSlug = searchParams.get("partnerSlug") ?? undefined;
 
   if (scope === "admin") {
+    const authError = await requireAdminSession(request);
+    if (authError) return authError;
+
     return NextResponse.json({ status: 1, data: await listPartnerAds() });
   }
 
   if (scope === "partner") {
+    const partnerId = await resolveAuthenticatedPartnerId(request);
+    if (!partnerId) return jsonError("Authentication required.", 401);
+
     return NextResponse.json({ status: 1, data: await listPartnerAds(partnerId) });
   }
 
@@ -24,6 +30,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const partnerId = await resolveAuthenticatedPartnerId(request);
+  if (!partnerId) return jsonError("Authentication required.", 401);
+
   const csrfError = assertCsrf(request);
   if (csrfError) return csrfError;
 
@@ -43,8 +52,10 @@ export async function POST(request: NextRequest) {
   }
 
   const ad = await createPartnerAd({
-    partnerId: cleanText(payload.partnerId, "ptr-001"),
-    partnerSlug: cleanText(payload.partnerSlug, "montaja-rawafed"),
+    // partnerId is always the authenticated caller's own id - never taken from the
+    // request body, so one partner cannot create an ad attributed to another partner.
+    partnerId,
+    partnerSlug: cleanText(payload.partnerSlug, partnerId),
     partnerName: cleanText(payload.partnerName, "منتجع روافد"),
     title,
     description,

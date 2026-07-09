@@ -85,3 +85,33 @@ export function partnerAuthHeader(request: NextRequest, overrideToken?: string) 
   const token = overrideToken ?? getPartnerAccessToken(request);
   return token ? `Bearer ${token}` : "";
 }
+
+/**
+ * Resolves the authenticated partner's real id by asking the partner-api backend
+ * (via /partner/me) who the caller's access token belongs to. Never trust a
+ * partnerId supplied by the client body/query string for authorization - always
+ * use this instead, so a caller cannot act as another partner.
+ */
+export async function resolveAuthenticatedPartnerId(request: NextRequest): Promise<string | null> {
+  const authorization = partnerAuthHeader(request);
+  if (!authorization) return null;
+
+  try {
+    const upstream = await fetch(partnerApiUrl("partner/me"), {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: authorization,
+      },
+      cache: "no-store",
+    });
+
+    if (!upstream.ok) return null;
+
+    const payload = (await upstream.json().catch(() => null)) as { ok?: boolean; data?: { id?: string | number } } | null;
+    const id = payload?.data?.id;
+    return id === undefined || id === null ? null : String(id);
+  } catch {
+    return null;
+  }
+}

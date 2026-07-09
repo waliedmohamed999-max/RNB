@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminSession } from "@/lib/api-security";
 import { readPaymentsStore } from "../_store";
 
 export async function GET(request: NextRequest) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get("q") ?? "").toLowerCase();
   const status = searchParams.get("status") ?? "all";

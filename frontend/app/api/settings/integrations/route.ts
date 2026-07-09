@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertCsrf, jsonError } from "@/lib/api-security";
+import { assertCsrf, jsonError, requireAdminSession } from "@/lib/api-security";
 import { readStore, writeStore, type StoredIntegration } from "../_store";
 
 function previewSecret(value: string) {
@@ -7,12 +7,18 @@ function previewSecret(value: string) {
   return `${value.slice(0, 4)}••••••••${value.slice(-4)}`;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const store = await readStore();
   return NextResponse.json({ status: 1, data: store.integrations ?? [] });
 }
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const csrfError = assertCsrf(request);
   if (csrfError) return csrfError;
 

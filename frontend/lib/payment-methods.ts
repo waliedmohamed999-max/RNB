@@ -195,3 +195,25 @@ export function getEnabledPaymentMethods(methods: PaymentMethod[]): PaymentMetho
   return methods.filter((method) => method.enabled);
 }
 
+export type PublicPaymentMethod = Omit<PaymentMethod, "secretKey" | "webhookSecret" | "merchantKey"> & {
+  secretKeyPreview?: string;
+  webhookSecretPreview?: string;
+  merchantKeyPreview?: string;
+};
+
+function maskSecret(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const visible = value.slice(-4);
+  return `${"•".repeat(8)}${visible}`;
+}
+
+export function toPublicPaymentMethod(method: PaymentMethod): PublicPaymentMethod {
+  const { secretKey, webhookSecret, merchantKey, ...rest } = method;
+  return {
+    ...rest,
+    secretKeyPreview: maskSecret(secretKey),
+    webhookSecretPreview: maskSecret(webhookSecret),
+    merchantKeyPreview: maskSecret(merchantKey),
+  };
+}
+

@@ -388,7 +388,9 @@ export function AuthAccessPanel({ returnUrl = "/", initialMode = "login", brandN
               <button disabled={isPending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF385C] py-3 text-base font-bold text-white transition hover:bg-[#E31C5F] disabled:opacity-60">
                 {isPending ? <><Spinner /> جار تسجيل الدخول...</> : "تسجيل الدخول"}
               </button>
-              <p className="text-center text-xs font-bold text-gray-500">بيانات الأدمن المحلي: admin@labayh.local / password</p>
+              {process.env.NODE_ENV !== "production" ? (
+                <p className="text-center text-xs font-bold text-gray-500">بيانات الأدمن المحلي: admin@labayh.local / password</p>
+              ) : null}
               <div className="flex items-center gap-3"><div className="flex-1 border-t border-gray-200" /><span className="text-xs text-gray-400">أو</span><div className="flex-1 border-t border-gray-200" /></div>
               {/* TODO: Enable Google and Apple buttons when OAuth provider keys are configured. */}
               <div className="grid gap-3 sm:grid-cols-2">

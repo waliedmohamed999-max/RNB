@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertCsrf } from "@/lib/api-security";
+import { assertCsrf, requireAdminSession } from "@/lib/api-security";
 import { readStore, writeStore } from "../_store";
 
 export async function PUT(request: NextRequest) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const csrfError = assertCsrf(request);
   if (csrfError) return csrfError;
 

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertCsrf, jsonError } from "@/lib/api-security";
+import { assertCsrf, jsonError, requireAdminSession } from "@/lib/api-security";
 import { readStore, writeStore, type StoredApiKey } from "../../_store";
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const csrfError = assertCsrf(request);
   if (csrfError) return csrfError;
 
@@ -17,6 +20,9 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
 }
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const csrfError = assertCsrf(request);
   if (csrfError) return csrfError;
 

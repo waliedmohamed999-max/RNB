@@ -22,17 +22,19 @@ type LoginRequestBody = {
 
 const LOCAL_ADMIN_COOKIE = "labayh_vercel_admin";
 const DEFAULT_LOCAL_ADMIN_EMAIL = "admin@labayh.local";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const LOCAL_ADMIN_EMAILS = new Set(
   [DEFAULT_LOCAL_ADMIN_EMAIL, process.env.ADMIN_EMAIL]
     .filter(Boolean)
     .map((value) => String(value).toLowerCase()),
 );
+// In production, only an explicitly configured ADMIN_PASSWORD is accepted. If it isn't set,
+// this set is empty and local admin login is rejected outright instead of falling back to a
+// weak default password.
 const LOCAL_ADMIN_PASSWORDS = new Set(
   [
     process.env.ADMIN_PASSWORD,
-    process.env.NEXT_PUBLIC_DEMO_ADMIN_PASSWORD,
-    "password",
-    "strong-password",
+    ...(IS_PRODUCTION ? [] : [process.env.NEXT_PUBLIC_DEMO_ADMIN_PASSWORD, "password", "strong-password"]),
   ]
     .filter(Boolean)
     .map((value) => String(value)),

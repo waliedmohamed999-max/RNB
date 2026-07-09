@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertCsrf, jsonError, readJsonBody } from "@/lib/api-security";
+import { assertCsrf, jsonError, readJsonBody, requireAdminSession } from "@/lib/api-security";
 import { updatePartnerAdStatus, type PartnerAdStatus } from "@/lib/partner-ads-store";
 
 const statuses: PartnerAdStatus[] = ["draft", "pending", "approved", "rejected"];
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const authError = await requireAdminSession(request);
+  if (authError) return authError;
+
   const csrfError = assertCsrf(request);
   if (csrfError) return csrfError;
 
