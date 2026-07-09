@@ -1105,12 +1105,34 @@ export async function getProfile(cookieHeader?: string) {
 }
 
 export async function getDashboardSummary(cookieHeader?: string) {
-  return fetchBridge<BridgeDashboardSummary>("dashboard/summary", {
+  const payload = await fetchBridge<BridgeDashboardSummary>("dashboard/summary", {
     cookieHeader,
     revalidate: false,
   });
-}
 
+  if (payload) {
+    return payload;
+  }
+
+  if (readLocalAdminSession(cookieHeader)) {
+    return {
+      role: "admin",
+      bookings_count: 0,
+      pending_count: 0,
+      completed_count: 0,
+      wishlist_count: 0,
+      gross_total: 0,
+      currency: "SAR",
+      quick_links: [
+        { label: "الحجوزات", href: "/dashboard/bookings" },
+        { label: "الإعدادات", href: "/dashboard/system/settings" },
+        { label: "اللغات", href: "/dashboard/system/languages" },
+      ],
+    } satisfies BridgeDashboardSummary;
+  }
+
+  return null;
+}
 export async function getDashboardBookings(
   cookieHeader?: string,
   searchParams?: Record<string, string | string[] | undefined>,
