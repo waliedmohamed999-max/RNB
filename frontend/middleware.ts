@@ -6,6 +6,7 @@ import { PARTNER_ACCESS_COOKIE, PARTNER_REFRESH_COOKIE } from "@/lib/partner-ses
 const PROTECTED_PREFIXES = ["/dashboard", "/api/v1/dashboard"];
 const PARTNER_DASHBOARD_PREFIX = "/partner-dashboard";
 const PARTNER_API_PREFIX = "/api/partner-system";
+const LOCAL_ADMIN_COOKIE = "labayh_vercel_admin";
 const PARTNER_PUBLIC_API_PREFIXES = [
   "/api/partner-system/auth/login",
   "/api/partner-system/auth/register-partner",
@@ -24,7 +25,57 @@ function createToken() {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function decodeBase64Url(value: string) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+function parseSessionCandidate(value: string) {
+  try {
+    const session = JSON.parse(value) as { roles?: unknown };
+    const roles = Array.isArray(session.roles) ? session.roles : [];
+    return roles.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function hasLocalAdminSession(request: NextRequest) {
+  const raw = request.cookies.get(LOCAL_ADMIN_COOKIE)?.value;
+  if (!raw) {
+    return false;
+  }
+
+  const candidates = new Set<string>([raw]);
+  let decoded = raw;
+
+  for (let index = 0; index < 3; index += 1) {
+    try {
+      decoded = decodeURIComponent(decoded);
+      candidates.add(decoded);
+    } catch {
+      break;
+    }
+  }
+
+  for (const candidate of Array.from(candidates)) {
+    try {
+      candidates.add(decodeBase64Url(candidate));
+    } catch {
+      // Keep trying the remaining formats.
+    }
+  }
+
+  return Array.from(candidates).some(parseSessionCandidate);
+}
 async function hasSession(request: NextRequest) {
+  if (hasLocalAdminSession(request)) {
+    return true;
+  }
+
   try {
     const response = await fetch(`${legacyBaseUrl}/bridge/v1/session`, {
       method: "GET",
@@ -139,3 +190,4 @@ function applyCorsHeaders(response: NextResponse, origin: string | null, trusted
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt).*)"],
 };
+
