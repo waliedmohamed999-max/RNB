@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { legacyUrl } from "@/lib/platform";
 import { CSRF_COOKIE_NAME } from "@/lib/security-constants";
+import { fetchLegacyBridgeSession } from "@/lib/legacy-session";
 import { normalizeDeepText } from "@/lib/text";
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -87,66 +88,34 @@ export function assertBodySize(request: NextRequest, maxBytes = MAX_PROXY_BODY_B
 }
 
 export async function requireAdminSession(request: NextRequest) {
-  try {
-    const response = await fetch(legacyUrl("/bridge/v1/session"), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Cookie: request.headers.get("cookie") ?? "",
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return jsonError("Authentication required.", 401);
-    }
-
-    const payload = (await response.json()) as {
-      status?: number;
-      data?: { roles?: unknown };
-    };
-    const roles = Array.isArray(payload.data?.roles) ? payload.data.roles.map(String) : [];
-    const allowed = roles.some((role) => ["administrator", "admin", "superadmin"].includes(role));
-
-    if (!payload.status || !allowed) {
-      return jsonError("Admin permissions required.", 403);
-    }
-
-    return null;
-  } catch {
+  const payload = await fetchLegacyBridgeSession(request.headers.get("cookie") ?? "");
+  if (!payload) {
     return jsonError("Authentication required.", 401);
   }
+
+  const roles = Array.isArray(payload.data?.roles) ? payload.data.roles.map(String) : [];
+  const allowed = roles.some((role) => ["administrator", "admin", "superadmin"].includes(role));
+
+  if (!payload.status || !allowed) {
+    return jsonError("Admin permissions required.", 403);
+  }
+
+  return null;
 }
 
 export async function requireDashboardSession(request: NextRequest) {
-  try {
-    const response = await fetch(legacyUrl("/bridge/v1/session"), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Cookie: request.headers.get("cookie") ?? "",
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return jsonError("Authentication required.", 401);
-    }
-
-    const payload = (await response.json()) as {
-      status?: number;
-      data?: { roles?: unknown };
-    };
-    const roles = Array.isArray(payload.data?.roles) ? payload.data.roles : [];
-
-    if (!payload.status || roles.length === 0) {
-      return jsonError("Authentication required.", 401);
-    }
-
-    return null;
-  } catch {
+  const payload = await fetchLegacyBridgeSession(request.headers.get("cookie") ?? "");
+  if (!payload) {
     return jsonError("Authentication required.", 401);
   }
+
+  const roles = Array.isArray(payload.data?.roles) ? payload.data.roles : [];
+
+  if (!payload.status || roles.length === 0) {
+    return jsonError("Authentication required.", 401);
+  }
+
+  return null;
 }
 
 export function assertCsrf(request: NextRequest) {

@@ -6,6 +6,7 @@ import {
   jsonError,
   readJsonBody,
 } from "@/lib/api-security";
+import { encodeLocalAdminSession, LOCAL_ADMIN_COOKIE } from "@/lib/local-admin-session";
 
 type LoginRequestBody = {
   email?: unknown;
@@ -20,7 +21,6 @@ type LoginRequestBody = {
   return_url?: unknown;
 };
 
-const LOCAL_ADMIN_COOKIE = "labayh_vercel_admin";
 const DEFAULT_LOCAL_ADMIN_EMAIL = "admin@labayh.local";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const LOCAL_ADMIN_EMAILS = new Set(
@@ -46,9 +46,6 @@ function safeReturnUrl(value: unknown, fallback = "/dashboard") {
     : fallback;
 }
 
-function encodeLocalAdminSession(session: unknown) {
-  return Buffer.from(JSON.stringify(session), "utf8").toString("base64url");
-}
 function createLocalAdminSession() {
   return {
     id: 1,

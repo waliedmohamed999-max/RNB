@@ -1,5 +1,6 @@
 import { legacyUrl } from "@/lib/platform";
 import { normalizeDeepText } from "@/lib/text";
+import { readLocalAdminSessionFromHeader } from "@/lib/local-admin-session";
 
 export type BridgeListingType = "home" | "experience" | "service";
 
@@ -877,6 +878,30 @@ function createTimeoutSignal(timeoutMs = 8000) {
   };
 }
 
+async function performBridgeRequest(path: string, options: FetchBridgeOptions, signal: AbortSignal) {
+  const headers: HeadersInit = {
+    Accept: "application/json",
+  };
+
+  if (options.body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  if (options.cookieHeader) {
+    headers.Cookie = options.cookieHeader;
+  }
+
+  return fetch(legacyUrl(`/bridge/v1/${path}`), {
+    method: options.method ?? "GET",
+    headers,
+    signal,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    ...(options.revalidate === false
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: options.revalidate ?? 120 } }),
+  });
+}
+
 async function fetchBridgePayload<T>(
   path: string,
   options: FetchBridgeOptions = {},
@@ -884,28 +909,7 @@ async function fetchBridgePayload<T>(
   const timeout = createTimeoutSignal(options.timeoutMs);
 
   try {
-    const headers: HeadersInit = {
-      Accept: "application/json",
-    };
-
-    if (options.body !== undefined) {
-      headers["Content-Type"] = "application/json";
-    }
-
-    if (options.cookieHeader) {
-      headers.Cookie = options.cookieHeader;
-    }
-
-    const response = await fetch(legacyUrl(`/bridge/v1/${path}`), {
-      method: options.method ?? "GET",
-      headers,
-      signal: timeout.signal,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-      ...(options.revalidate === false
-        ? { cache: "no-store" as const }
-        : { next: { revalidate: options.revalidate ?? 120 } }),
-    });
-
+    const response = await performBridgeRequest(path, options, timeout.signal);
     if (!response.ok) {
       return null;
     }
@@ -925,28 +929,7 @@ async function fetchBridgeResult<T>(
   const timeout = createTimeoutSignal(options.timeoutMs);
 
   try {
-    const headers: HeadersInit = {
-      Accept: "application/json",
-    };
-
-    if (options.body !== undefined) {
-      headers["Content-Type"] = "application/json";
-    }
-
-    if (options.cookieHeader) {
-      headers.Cookie = options.cookieHeader;
-    }
-
-    const response = await fetch(legacyUrl(`/bridge/v1/${path}`), {
-      method: options.method ?? "GET",
-      headers,
-      signal: timeout.signal,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-      ...(options.revalidate === false
-        ? { cache: "no-store" as const }
-        : { next: { revalidate: options.revalidate ?? 120 } }),
-    });
-
+    const response = await performBridgeRequest(path, options, timeout.signal);
     const contentType = response.headers.get("content-type") ?? "";
     const payload = contentType.includes("application/json")
       ? normalizeDeepText((await response.json()) as Partial<BridgeResponse<T>>)
@@ -1002,70 +985,8 @@ export function buildListingPath(item: Pick<BridgeListing, "id" | "slug" | "type
   return `/${bridgeTypeToPath(item.type)}/${item.id}/${item.slug}`;
 }
 
-function getCookieValue(cookieHeader: string, name: string) {
-  return cookieHeader
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${name}=`))
-    ?.slice(name.length + 1);
-}
-
-function parseSessionCandidate(value: string): BridgeSessionUser | null {
-  try {
-    const session = JSON.parse(value) as BridgeSessionUser;
-    const roles = Array.isArray(session.roles) ? session.roles : [];
-    return roles.length > 0 ? session : null;
-  } catch {
-    return null;
-  }
-}
-
-function decodeLocalAdminSessionValue(raw: string) {
-  const candidates = new Set<string>([raw]);
-  let decoded = raw;
-
-  for (let index = 0; index < 3; index += 1) {
-    try {
-      decoded = decodeURIComponent(decoded);
-      candidates.add(decoded);
-    } catch {
-      break;
-    }
-  }
-
-  for (const candidate of Array.from(candidates)) {
-    try {
-      candidates.add(Buffer.from(candidate, "base64url").toString("utf8"));
-    } catch {
-      // Keep trying the remaining formats.
-    }
-  }
-
-  return candidates;
-}
-
-function readLocalAdminSession(cookieHeader?: string): BridgeSessionUser | null {
-  if (!cookieHeader) {
-    return null;
-  }
-
-  const raw = getCookieValue(cookieHeader, "labayh_vercel_admin");
-  if (!raw) {
-    return null;
-  }
-
-  for (const candidate of decodeLocalAdminSessionValue(raw)) {
-    const session = parseSessionCandidate(candidate);
-    if (session) {
-      return session;
-    }
-  }
-
-  return null;
-}
-
 export async function getSessionUser(cookieHeader?: string) {
-  const localSession = readLocalAdminSession(cookieHeader);
+  const localSession = readLocalAdminSessionFromHeader(cookieHeader);
   if (localSession) {
     return localSession;
   }
@@ -1114,7 +1035,7 @@ export async function getDashboardSummary(cookieHeader?: string) {
     return payload;
   }
 
-  if (readLocalAdminSession(cookieHeader)) {
+  if (readLocalAdminSessionFromHeader(cookieHeader)) {
     return {
       role: "admin",
       bookings_count: 0,
@@ -1860,7 +1781,7 @@ export async function getLanguages(
     return payload;
   }
 
-  if (readLocalAdminSession(cookieHeader)) {
+  if (readLocalAdminSessionFromHeader(cookieHeader)) {
     return {
       total: 2,
       page: 1,
