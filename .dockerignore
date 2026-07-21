@@ -1,0 +1,30 @@
+# Root .dockerignore for the root-level Dockerfile (frontend build).
+# Only frontend/ is needed for that image - everything else in this
+# monorepo (the other three projects, build artifacts, VCS history) is
+# excluded so the build context sent to the Docker daemon / Render stays
+# small and fast.
+
+.git
+.github
+.vscode
+.claude
+docs
+tools
+hostinger_upload_ready
+_laravel12_isolated_20260709_171133
+
+partner-api
+partner-mobile-app
+public_html
+
+frontend/node_modules
+frontend/.next
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+!frontend/.env.production.example
+
+**/node_modules
+**/.next
+**/*.log
+**/.DS_Store
