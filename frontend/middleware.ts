@@ -51,6 +51,16 @@ function isProtectedPartnerApiRoute(pathname: string) {
   return pathname.startsWith(PARTNER_API_PREFIX) && !PARTNER_PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+// Protected/dynamic routes must never be cached by an intermediary (e.g. the
+// CDN in front of Render) - a redirect-to-login or 404 cached from one
+// visitor's request (unauthenticated, or hit during a cold start) would
+// otherwise get served to every later visitor of that same URL, regardless
+// of their own session.
+function noStore(response: NextResponse) {
+  response.headers.set("Cache-Control", "private, no-cache, no-store, max-age=0, must-revalidate");
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const protectedRoute = PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
@@ -61,19 +71,19 @@ export async function middleware(request: NextRequest) {
   const origin = request.headers.get("origin");
 
   if (pathname.startsWith("/api/") && origin && !trustedOrigins.has(origin)) {
-    return NextResponse.json({ status: 0, message: "Origin not allowed." }, { status: 403 });
+    return noStore(NextResponse.json({ status: 0, message: "Origin not allowed." }, { status: 403 }));
   }
 
   if (pathname.startsWith("/api/") && request.method === "OPTIONS") {
     const response = new NextResponse(null, { status: 204 });
     applyCorsHeaders(response, origin, trustedOrigins);
-    return response;
+    return noStore(response);
   }
 
   if (pathname.startsWith("/api/") && STATE_CHANGING_METHODS.has(request.method)) {
     const headerToken = request.headers.get("x-csrf-token") ?? "";
     if (!csrfToken || headerToken !== csrfToken) {
-      return NextResponse.json({ status: 0, message: "Invalid request token." }, { status: 403 });
+      return noStore(NextResponse.json({ status: 0, message: "Invalid request token." }, { status: 403 }));
     }
   }
 
@@ -81,24 +91,24 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith("/api/")) {
       const response = NextResponse.json({ status: 0, message: "Authentication required." }, { status: 401 });
       applyCorsHeaders(response, origin, trustedOrigins);
-      return response;
+      return noStore(response);
     }
 
     const loginUrl = new URL("/partner-dashboard/login", request.url);
     loginUrl.searchParams.set("return_url", `${pathname}${request.nextUrl.search}`);
-    return NextResponse.redirect(loginUrl);
+    return noStore(NextResponse.redirect(loginUrl));
   }
 
   if (protectedRoute && !(await hasSession(request))) {
     if (pathname.startsWith("/api/")) {
       const response = NextResponse.json({ status: 0, message: "Authentication required." }, { status: 401 });
       applyCorsHeaders(response, origin, trustedOrigins);
-      return response;
+      return noStore(response);
     }
 
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("return_url", `${pathname}${request.nextUrl.search}`);
-    return NextResponse.redirect(loginUrl);
+    return noStore(NextResponse.redirect(loginUrl));
   }
 
   const response = NextResponse.next();
@@ -110,6 +120,10 @@ export async function middleware(request: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       path: "/",
     });
+  }
+
+  if (protectedRoute || partnerDashboardRoute || protectedPartnerApiRoute) {
+    noStore(response);
   }
 
   return response;
